@@ -54,24 +54,26 @@ ALTER TABLE actor MODIFY middle_name BLOB;
 ALTER TABLE actor DROP COLUMN middle_name;
 
 #16- Trouver le nombre des acteurs ayant le meme last_name Afficher le resultat par ordre décroissant
-SELECT last_name, COUNT(*) AS count FROM actor GROUP BY last_name ORDER BY count DESC;
+SELECT last_name, COUNT(last_name) AS count FROM actor GROUP BY last_name HAVING count > 1 ORDER BY count(last_name) DESC;
 
 #17- Trouver le nombre des acteurs ayant le meme last_name 
 #Afficher UNIQUEMENT les last_names communs à au moins 3 acteurs Afficher par ordre alph. croissant
 SELECT last_name, COUNT(*) AS count FROM actor GROUP BY last_name HAVING COUNT(*) >= 3 ORDER BY last_name ASC;
 
 #18- Trouver le nombre des acteurs ayant le meme first_name Afficher le resultat par ordre alph.croissant
-SELECT first_name, COUNT(*) AS count FROM actor GROUP BY first_name ORDER BY first_name ASC;
+SELECT first_name, COUNT(*) AS count FROM actor GROUP BY  first_name   HAVING COUNT(first_name) > 1 ORDER BY first_name ASC;
 
 #19- Insérer dans la table actor ,un nouvel acteur , faites attention à l'id!
 INSERT INTO actor (first_name, last_name) VALUES ('MAREVA', 'TASSIN');
+select * from actor ORDER BY actor_id DESC LIMIT 3;
+select max(actor_id) from actor;
 
 #20- Modifier le first_name du nouvel acteur à "Jean"
 UPDATE actor SET first_name = 'Jean' WHERE first_name = 'MAREVA' AND last_name = 'TASSIN';
 
 #21- Supprimer le dernier acteur inséré de la table actor###
-#DELETE FROM actor ORDER BY actor_id DESC LIMIT 1;
-DELETE FROM actor WHERE id = last_insert_id();
+DELETE FROM actor ORDER BY actor_id DESC LIMIT 1;
+#DELETE FROM actor WHERE id = last_insert_id();
 
 #22-Corriger le first_name de l'acteur HARPO WILLIAMS qui était accidentellement inséré à GROUCHO WILLIAMS
 UPDATE actor SET first_name = 'HARPO' WHERE first_name = 'GROUCHO' AND last_name = 'WILLIAMS';
@@ -89,20 +91,17 @@ JOIN payment ON staff.staff_id = payment.staff_id WHERE payment.payment_date >= 
 staff.last_name ORDER BY total_salary DESC;
 
 #26- Afficher pour chaque film ,le nombre de ses acteurs
-SELECT film.title, COUNT(actor_id) AS Nombre_d_acteurs
-FROM film JOIN film_actor ON film.id = film_actor.film_id
-JOIN actor ON film_actor.actor_id = actor_id GROUP BY film.title;
-
 SELECT film.title, COUNT(actor.actor_id) AS Nombre_d_acteurs
 FROM film JOIN film_actor ON film.film_id = film_actor.film_id
-JOIN actor ON film_actor.actor_id =actor.actor_id GROUP BY film.title;
+JOIN actor ON film_actor.actor_id = actor.actor_id GROUP BY film.title;
+
 
 #27- Trouver le film intitulé "Hunchback Impossible"
 SELECT film_id 
 FROM film 
 WHERE title = 'Hunchback Impossible';
 
-#28- combien de copies exist t il dans le systme d'inventaire pour le film Hunchback Impossible
+#28- combien de copies existe t il dans le systme d'inventaire pour le film Hunchback Impossible
 SELECT COUNT(*) 
 FROM inventory 
 WHERE film_id = (
@@ -115,7 +114,7 @@ WHERE film_id = (
 #29- Afficher les titres des films en anglais commençant par 'K' ou 'Q'
 SELECT title
 FROM film 
-WHERE (title LIKE 'K%' OR title LIKE 'Q%') AND language_id = 'English';
+WHERE (title LIKE 'K%' OR title LIKE 'Q%') AND language_id = 1;
 
 #30- Afficher les first et last names des acteurs qui ont participé au film intitulé 'ACADEMY DINOSAUR'
 SELECT actor.first_name, actor.last_name 
@@ -137,11 +136,14 @@ JOIN inventory ON film.film_id = inventory.film_id JOIN rental ON
 inventory.inventory_id = rental.inventory_id GROUP BY film.title ORDER BY rental_count DESC LIMIT 5;
 
 #33- Afficher la liste des stores : store ID, city, country
-SELECT store.store_id, city.city, country.country FROM store JOIN address ON store.address_id = address.address_id 
-JOIN city ON address.city_id = city.city_id JOIN country ON city.country_id = country.country_id;
+SELECT store.store_id, city.city, country.country FROM store 
+JOIN address ON store.address_id = address.address_id 
+JOIN city ON address.city_id = city.city_id 
+JOIN country ON city.country_id = country.country_id;
 
 #34- Afficher le chiffre d'affaire par store. RQ: le chiffre d'affaire = somme (amount)
-SELECT store.store_id, SUM(payment.amount) as total_revenue FROM store JOIN staff ON store.store_id = staff.store_id 
+SELECT store.store_id, SUM(payment.amount) as total_revenue FROM store 
+JOIN staff ON store.store_id = staff.store_id 
 JOIN payment ON staff.staff_id = payment.staff_id GROUP BY store.store_id;
 
 #35- Lister par ordre décroissant le top 5 des catégories ayant le plus des revenues.
@@ -149,15 +151,16 @@ JOIN payment ON staff.staff_id = payment.staff_id GROUP BY store.store_id;
 
 SELECT category.name, SUM(payment.amount) as total_revenue 
 FROM category 
-JOIN film_category ON category.category_id = film_category.category_id 
-JOIN inventory ON film_category.film_id = inventory.film_id 
-JOIN rental ON inventory.inventory_id = rental.inventory_id 
-JOIN payment ON rental.rental_id = payment.rental_id
+INNER JOIN film_category ON category.category_id = film_category.category_id 
+INNER JOIN inventory ON film_category.film_id = inventory.film_id 
+INNER JOIN rental ON inventory.inventory_id = rental.inventory_id 
+INNER JOIN payment ON rental.rental_id = payment.rental_id
 GROUP BY category.name
 ORDER BY total_revenue DESC
 LIMIT 5;
 
 #36- Créer une view top_five_genres avec les résultat de la requete precedante
+# UNE VIEW  est le résultat d'une requête qui est stockée dans une structure qui ressembme à une table
 CREATE VIEW top_five_genres AS
 SELECT category.name, SUM(payment.amount) as total_revenue 
 FROM category 
@@ -167,6 +170,16 @@ JOIN rental ON inventory.inventory_id = rental.inventory_id
 JOIN payment ON rental.rental_id = payment.rental_id
 GROUP BY category.name
 ORDER BY total_revenue DESC
+LIMIT 5;
+#ou
+CREATE VIEW top_five_genre2
+AS SELECT category.name, SUM(payment.amount) AS Revenue FROM category
+INNER JOIN film_category ON category.category_id = film_category.category_id 
+INNER JOIN inventory ON film_category.film_id = inventory.film_id 
+INNER JOIN rental ON inventory.inventory_id = rental.inventory_id
+INNER JOIN payment ON rental.rental_id = payment.rental_id
+GROUP BY category.name
+ORDER BY Revenue DESC
 LIMIT 5;
 
 #37- Supprimer la table top_five_genres
